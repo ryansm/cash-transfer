@@ -11,7 +11,7 @@ class TransactionRepository implements IReadOnlyRepository
     public function find(string $id): ?Transaction
     {
         $res = DB::table('transactions')->find($id);
-        $user = new Transaction((array) $res);
+        $user = Transaction::factory()->make((array) $res);
 
         return $user;
     }
@@ -19,6 +19,15 @@ class TransactionRepository implements IReadOnlyRepository
     public function create(array $data): string
     {
         $res = DB::table('transactions')->insertGetId($data);
+
+        return $res;
+    }
+
+    public function setStatus(string $id, int $status): string
+    {
+        $res = DB::table('transactions')
+                    ->where('id', $id)
+                    ->update(['status' => $status]);
 
         return $res;
     }

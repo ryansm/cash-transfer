@@ -2,17 +2,20 @@
 
 namespace App\Services;
 
-use App\Contracts\ITransaction;
+use App\Contracts\ITransactionService;
+use App\Jobs\TransactionAuthorizationJob;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Repositories\TransactionRepository;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
 
-class TransactionService implements ITransaction
+class TransactionService extends ServiceProvider implements ITransactionService
 {
     /**
-     * @var UserRepository
+     * @var TransactionRepository
      */
     protected $transactionRepository;
 
@@ -35,11 +38,12 @@ class TransactionService implements ITransaction
             if (empty($transaction->getAttributes())) {
                 throw new Exception('Transação não encontrada.');
             }
-
-            return $transaction;
         } catch (Exception $e) {
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $transaction;
     }
 
     public function create(array $data): Transaction
@@ -56,35 +60,42 @@ class TransactionService implements ITransaction
             $payer = $this->userService->find($payer_id);
             $payee = $this->userService->find($payee_id);
 
-
             if ($payer->type == User::LOJISTA) {
                 throw new Exception('Lojistas não podem realizar transações.');
             }
 
-            if ($payer->balance < $transaction_value) {
-                throw new Exception('O valor da transação é maior que o saldo do pagador.');
-            }
-
-            $this->transferCash($payer, $payee, $transaction_value);
-
             $new_transaction_id = $this->transactionRepository->create($transaction->getAttributes());
+            $res = $this->find($new_transaction_id);
 
-            if ($new_transaction_id) {
-                $res = $this->find($new_transaction_id);
-            }
+            $this->userService->withdrawCredit($payer, $transaction_value);
 
             DB::commit();
-
-            return $res;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        TransactionAuthorizationJob::dispatch($res);
+
+        return $res;
     }
 
-    public function transferCash(User $payer, User $payee, float $value): void
+    public function authorizeTransaction(Transaction $transaction, bool $canAuthorize): void
     {
-        $this->userService->update(['balance' => $payer->balance - $value], $payer->id);
-        $this->userService->update(['balance' => $payee->balance + $value], $payee->id);
+        $status = $canAuthorize ? Transaction::OK : Transaction::CANCELADO;
+
+        DB::beginTransaction();
+
+        try {
+            $this->transactionRepository->setStatus($transaction->id, $status);
+            $this->userService->depositCredit($transaction->payee_id, $transaction->value);
+
+            DB::commit();
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            throw new Exception($e->getMessage());
+        }
     }
 }

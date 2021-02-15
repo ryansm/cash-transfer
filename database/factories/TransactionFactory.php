@@ -25,6 +25,7 @@ class TransactionFactory extends Factory
             'value' => $this->faker->randomFloat(2),
             'payer_id' => $this->faker->uuid,
             'payee_id' => $this->faker->uuid,
+            'status' => Transaction::PENDENTE,
             'created_at' => now(),
             'updated_at' => now(),
         ];

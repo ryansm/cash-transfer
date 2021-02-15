@@ -10,6 +10,10 @@ class Transaction extends Model
 {
     use HasFactory, Uuids;
 
+    const PENDENTE = 0;
+    const OK = 1;
+    const CANCELADO = 2;
+
     /**
      * The attributes that are mass assignable.
      *

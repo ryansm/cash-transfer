@@ -7,6 +7,7 @@ use App\Services\TransactionService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Redis;
 
 class TransactionController extends Controller
 {
@@ -40,7 +41,7 @@ class TransactionController extends Controller
                 'payee_id' => $request->payee,
             ]);
 
-            return new JsonResponse(['message' => 'Transação criada com sucesso!'], Response::HTTP_CREATED);
+            return new JsonResponse(['message' => 'Transação em andamento!'], Response::HTTP_ACCEPTED);
         } catch (Exception $e) {
             return new JsonResponse(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }

@@ -19,6 +19,7 @@ class CreateTransactionsTable extends Migration
             $table->float('value', 15, 2);
             $table->uuid('payer_id');
             $table->uuid('payee_id');
+            $table->smallInteger('status')->default(0);
             $table->timestamps();
         });
     }

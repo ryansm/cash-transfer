@@ -2,15 +2,16 @@
 
 namespace App\Services;
 
-use App\Contracts\IUser;
+use App\Contracts\IUserService;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use Exception;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
-class UserService implements IUser
+class UserService implements IUserService
 {
     /**
      * @var UserRepository
@@ -26,11 +27,12 @@ class UserService implements IUser
     {
         try {
             $users = $this->userRepository->all();
-
-            return $users;
         } catch (Exception $e) {
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $users;
     }
 
     public function find(string $id): User
@@ -41,11 +43,12 @@ class UserService implements IUser
             if (empty($user->getAttributes())) {
                 throw new Exception('Usuário não encontrado.');
             }
-
-            return $user;
         } catch (Exception $e) {
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $user;
     }
 
     public function create(array $data): User
@@ -57,18 +60,16 @@ class UserService implements IUser
 
         try {
             $new_user_id = $this->userRepository->create($user->getAttributes());
-
-            if ($new_user_id) {
-                $res = $this->find($new_user_id);
-            }
+            $res = $this->find($new_user_id);
 
             DB::commit();
-
-            return $res;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $res;
     }
 
     public function update(array $data, string $id): User
@@ -106,12 +107,13 @@ class UserService implements IUser
             $res = $this->find($id);
 
             DB::commit();
-
-            return $res;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $res;
     }
 
     public function delete($id): bool
@@ -124,10 +126,41 @@ class UserService implements IUser
             $res = $this->userRepository->delete($id);
 
             DB::commit();
-
-            return $res;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error($e->getMessage());
+            throw new Exception($e->getMessage());
+        }
+
+        return $res;
+    }
+
+    public function withdrawCredit(string $user_id, float $value): void
+    {
+        try {
+            $user = $this->find($user_id);
+
+            if ($user->balance < $value) {
+                throw new Exception('O usuário não tem saldo suficiente.');
+            }
+
+            $user->balance -= $value;
+
+            $this->update(['balance' => $user->balance], $user->id);
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
+        }
+    }
+
+    public function depositCredit(string $user_id, float $value): void
+    {
+        try {
+            $user = $this->find($user_id);
+            $user->balance += $value;
+
+            $this->update(['balance' => $user->balance], $user->id);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
     }
