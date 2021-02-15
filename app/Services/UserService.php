@@ -40,7 +40,7 @@ class UserService implements IUserService
         try {
             $user = $this->userRepository->find($id);
 
-            if (empty($user->getAttributes())) {
+            if (!$user) {
                 throw new Exception('Usuário não encontrado.');
             }
         } catch (Exception $e) {
@@ -135,7 +135,7 @@ class UserService implements IUserService
         return $res;
     }
 
-    public function withdrawCredit(string $user_id, float $value): void
+    public function withdrawCredit(string $user_id, float $value): User
     {
         try {
             $user = $this->find($user_id);
@@ -146,22 +146,26 @@ class UserService implements IUserService
 
             $user->balance -= $value;
 
-            $this->update(['balance' => $user->balance], $user->id);
+            $user = $this->update(['balance' => $user->balance], $user->id);
         } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
+
+        return $user;
     }
 
-    public function depositCredit(string $user_id, float $value): void
+    public function depositCredit(string $user_id, float $value): User
     {
         try {
             $user = $this->find($user_id);
             $user->balance += $value;
 
-            $this->update(['balance' => $user->balance], $user->id);
+            $user = $this->update(['balance' => $user->balance], $user->id);
         } catch (Exception $e) {
             Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        return $user;
     }
 }

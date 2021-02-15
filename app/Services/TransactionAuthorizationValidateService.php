@@ -18,7 +18,7 @@ class TransactionAuthorizationValidateService extends ServiceProvider implements
 
     public function execute(Transaction $transaction): bool
     {
-        $id = $transaction->getAttributes()['id']; // mock - 8fafdd68-a090-496f-8c9a-3442cf30dae6
+        $id = $transaction->id; // mock - 8fafdd68-a090-496f-8c9a-3442cf30dae6
 
         try {
             $res = Http::get('https://run.mocky.io/v3/8fafdd68-a090-496f-8c9a-3442cf30dae6');

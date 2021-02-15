@@ -10,7 +10,7 @@ interface IUserService
      * Show the profile for a given user.
      *
      * @param string $id
-     * @return User
+     * @return ?User
      */
     public function find(string $id): User;
 
@@ -44,16 +44,16 @@ interface IUserService
      *
      * @param string $user_id
      * @param float $value
-     * @return void
+     * @return User
      */
-    public function withdrawCredit(string $user_id, float $value): void;
+    public function withdrawCredit(string $user_id, float $value): User;
 
     /**
      * Deposit credit to user.
      *
      * @param string $user_id
      * @param float $value
-     * @return void
+     * @return User
      */
-    public function depositCredit(string $user_id, float $value): void;
+    public function depositCredit(string $user_id, float $value): User;
 }

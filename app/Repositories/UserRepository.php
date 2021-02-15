@@ -20,7 +20,7 @@ class UserRepository implements IReadOnlyRepository, IWritableRepository
     public function find(string $id): ?User
     {
         $res = DB::table('users')->find($id);
-        $user = User::factory()->make((array) $res);
+        $user = $res ? User::factory()->make((array) $res) : null;
 
         return $user;
     }

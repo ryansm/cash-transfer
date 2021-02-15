@@ -17,7 +17,7 @@ class TransactionTest extends TestCase
             'balance' => 1000,
         ]);
 
-        return $user->getAttributes()['id'];
+        return $user->id;
     }
 
     /**

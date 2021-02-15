@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\ITransactionService;
+use App\Events\TransactionCompleted;
 use App\Jobs\TransactionAuthorizationJob;
 use App\Models\Transaction;
 use App\Models\User;
@@ -35,7 +36,7 @@ class TransactionService extends ServiceProvider implements ITransactionService
         try {
             $transaction = $this->transactionRepository->find($id);
 
-            if (empty($transaction->getAttributes())) {
+            if (!$transaction) {
                 throw new Exception('Transação não encontrada.');
             }
         } catch (Exception $e) {
@@ -53,21 +54,14 @@ class TransactionService extends ServiceProvider implements ITransactionService
         DB::beginTransaction();
 
         try {
-            $transaction_value = $transaction->getAttributes()['value'];
-            $payer_id = $transaction->getAttributes()['payer_id'];
-            $payee_id = $transaction->getAttributes()['payee_id'];
-
-            $payer = $this->userService->find($payer_id);
-            $payee = $this->userService->find($payee_id);
-
-            if ($payer->type == User::LOJISTA) {
+            if ($transaction->payer->type == User::LOJISTA) {
                 throw new Exception('Lojistas não podem realizar transações.');
             }
 
             $new_transaction_id = $this->transactionRepository->create($transaction->getAttributes());
             $res = $this->find($new_transaction_id);
 
-            $this->userService->withdrawCredit($payer, $transaction_value);
+            $this->userService->withdrawCredit($transaction->payer->id, $transaction->value);
 
             DB::commit();
         } catch (\Exception $e) {
@@ -81,15 +75,18 @@ class TransactionService extends ServiceProvider implements ITransactionService
         return $res;
     }
 
-    public function authorizeTransaction(Transaction $transaction, bool $canAuthorize): void
+    public function authorizeTransaction(Transaction $transaction, bool $isAuthorized): void
     {
-        $status = $canAuthorize ? Transaction::OK : Transaction::CANCELADO;
+        $status = $isAuthorized ? Transaction::OK : Transaction::CANCELADO;
+        $user_id = $isAuthorized ? $transaction->payee_id : $transaction->payer_id;
 
         DB::beginTransaction();
 
         try {
             $this->transactionRepository->setStatus($transaction->id, $status);
-            $this->userService->depositCredit($transaction->payee_id, $transaction->value);
+            $res = $this->find($transaction->id);
+
+            $this->userService->depositCredit($user_id, $transaction->value);
 
             DB::commit();
         } catch (Exception $e) {
@@ -97,5 +94,7 @@ class TransactionService extends ServiceProvider implements ITransactionService
             Log::error($e->getMessage());
             throw new Exception($e->getMessage());
         }
+
+        TransactionCompleted::dispatch($res);
     }
 }

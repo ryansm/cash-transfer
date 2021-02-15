@@ -11,7 +11,7 @@ class TransactionRepository implements IReadOnlyRepository
     public function find(string $id): ?Transaction
     {
         $res = DB::table('transactions')->find($id);
-        $user = Transaction::factory()->make((array) $res);
+        $user = $res ? Transaction::factory()->make((array) $res) : null;
 
         return $user;
     }
