@@ -52,6 +52,12 @@ docker-compose up -d --build
 docker-compose exec php-fpm php artisan migrate
 ```
 
+7. Inicie o processamento de filas do Laravel
+
+```
+docker-compose run --rm php-fpm php artisan queue:work
+```
+
 ## Endpoints
 
 -   [POST] http://localhost:8000/oauth/token
